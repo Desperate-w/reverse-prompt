@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f1f3f8" />
+    <title>逆像 — 从画面反推提示词</title>
+    <meta name="description" content="上传一张参考图，拆解画面语言，生成可编辑、可复制的 AI 绘图提示词。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="逆像首页">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+        <span>逆像</span>
+        <small>REVERSE PROMPT</small>
+      </a>
+      <nav class="top-actions" aria-label="工具导航">
+        <button class="text-button" id="historyBtn">历史记录 <span id="historyCount">0</span></button>
+        <button class="avatar-button" aria-label="账户">WS</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow"><span></span> VISUAL PROMPT LAB / 01</p>
+        <h1>看到好图，<br />把它的<span>语言</span>带走。</h1>
+        <p class="intro-copy">上传参考图，我们会拆解主体、光线、构图、材质和镜头语言，生成一份真正可用的提示词。</p>
+      </section>
+
+      <section class="workspace" aria-label="图片提示词生成器">
+        <div class="image-lab">
+          <div class="panel-heading">
+            <div>
+              <span class="step">INPUT</span>
+              <h2>放入参考图</h2>
+            </div>
+            <button class="ghost-button" id="sampleBtn">试试示例</button>
+          </div>
+
+          <div class="scope-control" aria-label="识别范围">
+            <div class="scope-copy">
+              <span>识别范围</span>
+              <p id="scopeHint">只识别目标框内的主体，拖动或缩放框来调整。</p>
+            </div>
+            <div class="scope-switch" role="group" aria-label="选择图片识别范围">
+              <button type="button" class="active" data-analysis-mode="subject" aria-pressed="true"><i aria-hidden="true">⌗</i> 框选主体</button>
+              <button type="button" data-analysis-mode="full" aria-pressed="false"><i aria-hidden="true">□</i> 整张图片</button>
+            </div>
+          </div>
+
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
+            <div class="empty-state" id="emptyState">
+              <div class="upload-glyph" aria-hidden="true"><span>↑</span></div>
+              <strong>拖入一张让你停下来的图</strong>
+              <p>或点击选择 · JPG / PNG / WEBP · 最大 10MB</p>
+            </div>
+            <img id="preview" alt="上传图片预览" hidden />
+            <div class="scan-overlay" id="scanOverlay" hidden aria-hidden="true">
+              <div class="scan-line"></div>
+              <span class="corner c1"></span><span class="corner c2"></span>
+              <span class="corner c3"></span><span class="corner c4"></span>
+              <div class="focus-box" id="focusBox" tabindex="0" role="slider" aria-label="主体识别区域，可拖动移动或缩放" aria-valuetext="画面中央，选区宽 37%，高 44%">
+                <span>SUBJECT / MOVE + RESIZE</span>
+                <i class="resize-handle handle-nw" data-resize="nw" aria-hidden="true"></i>
+                <i class="resize-handle handle-ne" data-resize="ne" aria-hidden="true"></i>
+                <i class="resize-handle handle-sw" data-resize="sw" aria-hidden="true"></i>
+                <i class="resize-handle handle-se" data-resize="se" aria-hidden="true"></i>
+              </div>
+              <div class="full-frame-label" id="fullFrameLabel" hidden><span>FULL FRAME</span><strong>整图识别已开启</strong></div>
+              <span class="meter meter-a">LIGHT 62%</span>
+              <span class="meter meter-b">DEPTH 78%</span>
+            </div>
+            <div class="image-actions" id="imageActions" hidden>
+              <span id="fileName">reference.jpg</span>
+              <button type="button" id="replaceBtn">更换图片</button>
+            </div>
+          </label>
+
+          <div class="analysis-strip" id="analysisStrip" aria-live="polite">
+            <span class="analysis-label">画面指纹</span>
+            <div class="chips" id="analysisChips">
+              <span>等待图片</span><span>—</span><span>—</span><span>—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="prompt-lab">
+          <div class="panel-heading">
+            <div>
+              <span class="step">OUTPUT</span>
+              <h2>生成提示词</h2>
+            </div>
+            <div class="status"><i></i><span id="statusText">准备就绪</span></div>
+          </div>
+
+          <div class="settings-row single-setting">
+            <label>输出语言
+              <select id="languageSelect">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="detail-control">
+            <div class="control-label"><span>描述精度</span><strong id="detailValue">平衡</strong></div>
+            <input type="range" id="detailRange" min="1" max="3" value="2" step="1" />
+            <div class="range-labels"><span>简洁</span><span>平衡</span><span>电影级</span></div>
+          </div>
+
+          <button class="generate-button" id="generateBtn" disabled>
+            <span class="button-icon">✦</span>
+            <span class="button-label">分析画面并生成</span>
+            <span class="button-shortcut">⌘ ↵</span>
+          </button>
+
+          <div class="result-area" id="resultArea">
+            <div class="result-head">
+              <strong class="result-title">图片提示词</strong>
+              <button class="copy-button" id="copyBtn" disabled><span>⧉</span> 复制</button>
+            </div>
+            <div class="prompt-output empty" id="promptOutput">提示词会在这里生成。先放入一张图片，让我们看看它由什么构成。</div>
+            <div class="result-foot">
+              <span id="wordCount">0 字符</span>
+              <button id="downloadBtn" disabled>↓ 导出 .txt</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="how-it-works">
+        <p>不是简单的“看图说话”</p>
+        <div class="capability-grid">
+          <article><span>01</span><h3>读懂视觉结构</h3><p>识别主体关系、视角、景别和构图重心。</p></article>
+          <article><span>02</span><h3>翻译画面质感</h3><p>捕捉光型、色调、材质、颗粒与情绪。</p></article>
+          <article><span>03</span><h3>得到完整提示词</h3><p>直接复制、继续修改，或保存为文字文件。</p></article>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">已复制提示词</div>
+    <script src="./app.js"></script>
+  </body>
+</html>

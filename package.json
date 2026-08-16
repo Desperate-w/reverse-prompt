@@ -1,0 +1,14 @@
+{
+  "name": "reverse-prompt",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check app.js && node --check scripts/test-ark.mjs",
+    "test:ark": "node scripts/test-ark.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
